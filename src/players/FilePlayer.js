@@ -3,6 +3,8 @@ import React, { Component } from 'react'
 import { getSDK, isMediaStream, supportsWebKitPresentationMode } from '../utils'
 import { canPlay, AUDIO_EXTENSIONS, HLS_EXTENSIONS, DASH_EXTENSIONS, FLV_EXTENSIONS } from '../patterns'
 
+import Hls from "hls.js"
+
 const HAS_NAVIGATOR = typeof navigator !== 'undefined'
 const IS_IPAD_PRO = HAS_NAVIGATOR && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 const IS_IOS = HAS_NAVIGATOR && (/iPad|iPhone|iPod/.test(navigator.userAgent) || IS_IPAD_PRO) && !window.MSStream
@@ -161,23 +163,22 @@ export default class FilePlayer extends Component {
       this.dash.reset()
     }
     if (this.shouldUseHLS(url)) {
-      getSDK(HLS_SDK_URL.replace('VERSION', hlsVersion), HLS_GLOBAL).then(Hls => {
-        this.hls = new Hls(hlsOptions)
-        this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          this.props.onReady()
-        })
-        this.hls.on(Hls.Events.ERROR, (e, data) => {
-          this.props.onError(e, data, this.hls, Hls)
-        })
-        if (MATCH_CLOUDFLARE_STREAM.test(url)) {
-          const id = url.match(MATCH_CLOUDFLARE_STREAM)[1]
-          this.hls.loadSource(REPLACE_CLOUDFLARE_STREAM.replace('{id}', id))
-        } else {
-          this.hls.loadSource(url)
-        }
-        this.hls.attachMedia(this.player)
-        this.props.onLoaded()
+      this.hls = new Hls(hlsOptions)
+      this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        this.props.onReady()
       })
+      this.hls.on(Hls.Events.ERROR, (e, data) => {
+        this.props.onError(e, data, this.hls, Hls)
+      })
+      if (MATCH_CLOUDFLARE_STREAM.test(url)) {
+        const id = url.match(MATCH_CLOUDFLARE_STREAM)[1]
+        this.hls.loadSource(REPLACE_CLOUDFLARE_STREAM.replace('{id}', id))
+      } else {
+        this.hls.loadSource(url)
+      }
+      this.hls.attachMedia(this.player)
+      this.props.onLoaded()
+
     }
     if (this.shouldUseDASH(url)) {
       getSDK(DASH_SDK_URL.replace('VERSION', dashVersion), DASH_GLOBAL).then(dashjs => {
